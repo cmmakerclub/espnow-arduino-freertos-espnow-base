@@ -10,14 +10,18 @@ const int MODULE_SIZE = 2;
 CMMC_Module* modules[10];
 RTC_DATA_ATTR static int rebootCount = -1;
 
+
 /* function headers */
-void appTask( void * parameter);
+void appTask(void * parameter);
 void initEspnow();
 
 
 /* espnow */
 static char sta_mac[18];
 static char softap_mac[18];
+uint8_t peerCount = 0;
+uint32_t msAfterESPNowRecv = 0;
+uint32_t counter = 0;
 
 void setup() {
   /* Stack size in bytes. */ /* Parameter passed as input of the task */ /* Priority of the task. */
@@ -33,7 +37,39 @@ void setup() {
   initEspnow();
 }
 
+esp_now_peer_info_t slave;
+void registerCallbacks() {
+  esp_now_register_send_cb([&] (const uint8_t *mac_addr, esp_now_send_status_t status) {
+    // sentCnt++;
+    Serial.println("SENT!");
+  });
+  esp_now_register_recv_cb([&](const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+    Serial.println("RECV!");
+    memcpy(&slave.peer_addr, mac_addr, 6);
+    esp_err_t addStatus = esp_now_add_peer(&slave);
+    if (addStatus == ESP_OK) {
+      peerCount++;
+      printf("\n=====================");
+      printf("\nADD PEER status=0x%02x", ESP_OK);
+      printf("\n=====================\n");
+    }
+    else {
+      printf("\n=====================");
+      printf("\nADD PEER [FAILED] status=0x%02x", addStatus - ESP_ERR_ESPNOW_BASE);
+      printf("\n=====================\n");
+    }
+
+    uint8_t time = 1;
+    esp_err_t result = esp_now_send(mac_addr, &time, 1);
+    if (result == ESP_OK) {
+      Serial.println("esp_now_send [ESP_OK]");
+    }
+    counter++;
+    msAfterESPNowRecv = millis();
+  });
+}
 void initEspnow() {
+  bzero(&slave, sizeof(slave));
   WiFi.mode(WIFI_AP_STA);
   strcpy(sta_mac, WiFi.macAddress().c_str());
   strcpy(softap_mac, WiFi.softAPmacAddress().c_str());
@@ -41,6 +77,7 @@ void initEspnow() {
   Serial.printf(" AP MAC: %s\r\n", softap_mac);
   if (esp_now_init() == ESP_OK) {
     // updateStatus("ESPNow Init Success\n");
+    registerCallbacks();
   }
   else {
     // updateStatus("ESPNow Init Failed\n");
@@ -49,6 +86,7 @@ void initEspnow() {
 }
 
 void loop() {
+
 
 }
 
