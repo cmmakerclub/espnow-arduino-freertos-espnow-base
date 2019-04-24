@@ -25,7 +25,7 @@ uint32_t counter = 0;
 
 void setup() {
   /* Stack size in bytes. */ /* Parameter passed as input of the task */ /* Priority of the task. */
-  xTaskCreate(appTask, "appTask", 10000, NULL, 2, NULL);
+  // xTaskCreate(appTask, "appTask", 10000, NULL, 2, NULL);
 
   rebootCount++;
   Serial.begin(115200);
@@ -38,6 +38,7 @@ void setup() {
 }
 
 esp_now_peer_info_t slave;
+
 void registerCallbacks() {
   esp_now_register_send_cb([&] (const uint8_t *mac_addr, esp_now_send_status_t status) {
     // sentCnt++;
@@ -61,7 +62,7 @@ void registerCallbacks() {
 
     uint8_t time = 1;
     esp_err_t result = esp_now_send(mac_addr, &time, 1);
-    if (result == ESP_OK) {
+    if (result == ESP_OK)   {
       Serial.println("esp_now_send [ESP_OK]");
     }
     counter++;
@@ -71,23 +72,24 @@ void registerCallbacks() {
 void initEspnow() {
   bzero(&slave, sizeof(slave));
   WiFi.mode(WIFI_AP_STA);
+  delay(10);
   strcpy(sta_mac, WiFi.macAddress().c_str());
   strcpy(softap_mac, WiFi.softAPmacAddress().c_str());
   Serial.printf("STA MAC: %s\r\n", sta_mac);
   Serial.printf(" AP MAC: %s\r\n", softap_mac);
   if (esp_now_init() == ESP_OK) {
-    // updateStatus("ESPNow Init Success\n");
+    Serial.printf("ESPNow Init Success\n");
     registerCallbacks();
   }
   else {
-    // updateStatus("ESPNow Init Failed\n");
+    Serial.printf("ESPNow Init Failed\n");
     ESP.restart();
   }
 }
 
 void loop() {
-
-
+  yield();
+  // Serial.println("HELLO");
 }
 
 void appTask(void * parameter)
